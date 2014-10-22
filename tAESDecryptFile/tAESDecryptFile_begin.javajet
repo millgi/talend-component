@@ -1,0 +1,105 @@
+<%@ jet 
+	imports="
+		org.talend.core.model.process.INode 
+		org.talend.core.model.process.ElementParameterParser 
+		org.talend.core.model.metadata.IMetadataTable 
+		org.talend.core.model.metadata.IMetadataColumn 
+		org.talend.core.model.process.IConnection
+		org.talend.core.model.process.IConnectionCategory
+		org.talend.designer.codegen.config.CodeGeneratorArgument
+		org.talend.core.model.metadata.types.JavaTypesManager
+		org.talend.core.model.metadata.types.JavaType
+		java.util.List 
+    	java.util.Map
+	" 
+%>
+<% 
+    CodeGeneratorArgument codeGenArgument = (CodeGeneratorArgument) argument;
+    INode node = (INode)codeGenArgument.getArgument();
+    String cid = node.getUniqueName();
+    
+	String filename = ElementParameterParser.getValue(node, "__FILENAME__");	
+	
+	String dieOnErrorStr = ElementParameterParser.getValue(node, "__DIE_ON_ERROR__");
+	boolean dieOnError = (dieOnErrorStr!=null&&!("").equals(dieOnErrorStr))?("true").equals(dieOnErrorStr):false;
+	
+%>
+String aesHexKey_<%= cid %> = <%= ElementParameterParser.getValue(node, "__AES_KEY__") %>;
+String aesHexVector_<%= cid %> = <%= ElementParameterParser.getValue(node, "__AES_VECTOR__") %>;
+byte[] aesKey_<%= cid %> = null;
+byte[] aesVector_<%= cid %> = null;
+
+java.io.InputStream encryptedStream_<%= cid %> = null;
+java.io.InputStream decryptedStream_<%= cid %>;
+
+// open the file
+String os_<%=cid %> = System.getProperty("os.name").toLowerCase();
+boolean isWindows_<%=cid%>=false;
+if(os_<%=cid %>.indexOf("windows") > -1 || os_<%=cid %>.indexOf("nt") > -1){
+	isWindows_<%=cid%>=true;
+}
+Object filename_<%=cid %> = null;
+try {
+	filename_<%=cid %> = <%=filename %>;
+} catch(java.lang.Exception e) {
+	<%if (dieOnError) {%>
+		throw(e);
+	<%}else{%>
+		System.err.println(e.getMessage());
+	<%}%>
+}
+
+boolean isValidFile_<%=cid %> = true;
+java.io.Closeable toClose_<%=cid%> = null;
+try{
+    if(filename_<%=cid %> != null && filename_<%=cid %> instanceof String && filename_<%=cid %>.toString().startsWith("//")){
+		if (!isWindows_<%=cid%>){
+			filename_<%=cid %> = filename_<%=cid %>.toString().replaceFirst("//","/");
+		}
+    }
+    if(filename_<%=cid %> instanceof java.io.InputStream){
+    	encryptedStream_<%= cid %> = (java.io.InputStream)filename_<%=cid %>;
+    }else{
+    	encryptedStream_<%= cid %> = new java.io.FileInputStream(String.valueOf(filename_<%=cid %>));
+    }
+}catch(java.lang.Exception e){
+	<%if (dieOnError) {%>
+		throw(e);
+	<%}else{%>
+		System.err.println(e.getMessage());
+		isValidFile_<%=cid %> = false;
+	<%}%>
+}
+if(isValidFile_<%=cid %>){
+
+	try {
+		aesKey_<%= cid %> = aesHexKey_<%= cid %> == null || aesHexKey_<%= cid %>.trim().length() == 0 ?
+							null :
+							javax.xml.bind.DatatypeConverter.parseBase64Binary(aesHexKey_<%= cid %>);
+		aesVector_<%= cid %> = aesHexVector_<%= cid %> == null || aesHexVector_<%= cid %>.trim().length() == 0 ?
+							   null :
+							   javax.xml.bind.DatatypeConverter.parseBase64Binary(aesHexVector_<%= cid %>);
+	} catch (java.lang.Exception e) {
+		<%if (dieOnError) {%>
+			throw(e);
+		<%}else{%>
+			System.err.println(e.getMessage());
+		<%}%>
+	}
+
+
+	// decrypt the file !!
+	if (aesKey_<%= cid %> == null || aesVector_<%= cid %> == null) {
+		decryptedStream_<%= cid %> = encryptedStream_<%= cid %>;
+	} else {
+	    javax.crypto.spec.SecretKeySpec keySpec_<%= cid %> = new javax.crypto.spec.SecretKeySpec(aesKey_<%= cid %>, 0, 16, "AES");
+	    javax.crypto.spec.IvParameterSpec ivSpec_<%= cid %> = new javax.crypto.spec.IvParameterSpec(aesVector_<%= cid %>, 0, 16);
+	    javax.crypto.Cipher cipher_<%= cid %> = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
+    	cipher_<%= cid %>.init(javax.crypto.Cipher.DECRYPT_MODE, keySpec_<%= cid %>, ivSpec_<%= cid %>);
+		decryptedStream_<%= cid %> = new javax.crypto.CipherInputStream(encryptedStream_<%= cid %>, cipher_<%= cid %>); 
+	}
+
+	// save the InputStream to the global map
+	globalMap.put(<%= ElementParameterParser.getValue(node, "__GLOBAL_MAP_PARAMETER__") %>, decryptedStream_<%= cid %>);
+}
+ 
