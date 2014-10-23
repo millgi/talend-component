@@ -70,15 +70,15 @@ try{
 		isValidFile_<%=cid %> = false;
 	<%}%>
 }
-if(isValidFile_<%=cid %>){
+if(isValidFile_<%= cid %>){
 
 	try {
 		aesKey_<%= cid %> = aesHexKey_<%= cid %> == null || aesHexKey_<%= cid %>.trim().length() == 0 ?
 							null :
-							javax.xml.bind.DatatypeConverter.parseBase64Binary(aesHexKey_<%= cid %>);
+							javax.xml.bind.DatatypeConverter.parseHexBinary(aesHexKey_<%= cid %>);
 		aesVector_<%= cid %> = aesHexVector_<%= cid %> == null || aesHexVector_<%= cid %>.trim().length() == 0 ?
 							   null :
-							   javax.xml.bind.DatatypeConverter.parseBase64Binary(aesHexVector_<%= cid %>);
+							   javax.xml.bind.DatatypeConverter.parseHexBinary(aesHexVector_<%= cid %>);
 	} catch (java.lang.Exception e) {
 		<%if (dieOnError) {%>
 			throw(e);
@@ -92,10 +92,10 @@ if(isValidFile_<%=cid %>){
 	if (aesKey_<%= cid %> == null || aesVector_<%= cid %> == null) {
 		decryptedStream_<%= cid %> = encryptedStream_<%= cid %>;
 	} else {
-	    javax.crypto.spec.SecretKeySpec keySpec_<%= cid %> = new javax.crypto.spec.SecretKeySpec(aesKey_<%= cid %>, 0, 16, "AES");
-	    javax.crypto.spec.IvParameterSpec ivSpec_<%= cid %> = new javax.crypto.spec.IvParameterSpec(aesVector_<%= cid %>, 0, 16);
 	    javax.crypto.Cipher cipher_<%= cid %> = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
-    	cipher_<%= cid %>.init(javax.crypto.Cipher.DECRYPT_MODE, keySpec_<%= cid %>, ivSpec_<%= cid %>);
+    	javax.crypto.spec.SecretKeySpec keySpec_<%= cid %> = new javax.crypto.spec.SecretKeySpec(aesKey_<%= cid %>, "AES");
+	    javax.crypto.spec.IvParameterSpec ivSpec_<%= cid %> = new javax.crypto.spec.IvParameterSpec(aesVector_<%= cid %>, 0, cipher_<%= cid %>.getBlockSize());
+	    cipher_<%= cid %>.init(javax.crypto.Cipher.DECRYPT_MODE, keySpec_<%= cid %>, ivSpec_<%= cid %>);
 		decryptedStream_<%= cid %> = new javax.crypto.CipherInputStream(encryptedStream_<%= cid %>, cipher_<%= cid %>); 
 	}
 
